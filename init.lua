@@ -6,14 +6,61 @@
 -- CONFIGURATION
 -- ============================================================================
 
--- Folder where resumes are stored (update this path to match your setup)
+-- Default folder where resumes are stored
 local resumeFolder = "/Users/yash/Documents/Resumes/"
 
--- Debug mode - set to true to see more detailed logging
-local debugMode = true
+-- Debug mode - set to false for production use
+local debugMode = false
 
 -- Delay before typing into file picker (in seconds)
 local typingDelay = 0.5
+
+-- ============================================================================
+-- PATH SELECTION GUI
+-- ============================================================================
+
+-- Function to show path selection dialog
+local function selectResumeFolder()
+    local chooser = hs.chooser.new(function(choice)
+        if choice then
+            resumeFolder = choice.text .. "/"
+            hs.alert.show("Resume folder updated: " .. resumeFolder, 3)
+            debugLog("Resume folder changed to: " .. resumeFolder)
+        end
+    end)
+    
+    chooser:choices({
+        {text = "/Users/yash/Documents/Resumes/", subText = "Default Documents folder"},
+        {text = "/Users/yash/Desktop/Resumes/", subText = "Desktop folder"},
+        {text = "/Users/yash/Downloads/Resumes/", subText = "Downloads folder"},
+        {text = "/Users/yash/Documents/Job Applications/Resumes/", subText = "Job Applications folder"},
+        {text = "/Users/yash/Documents/Career/Resumes/", subText = "Career folder"},
+        {text = "Custom Path...", subText = "Enter custom path"}
+    })
+    
+    chooser:placeholderText("Select resume folder location")
+    chooser:show()
+end
+
+-- Function to handle custom path input
+local function getCustomPath()
+    local input = hs.dialog.textPrompt("Custom Resume Path", 
+        "Enter the full path to your resume folder:", 
+        resumeFolder, 
+        "OK", 
+        "Cancel")
+    
+    if input and input ~= "" then
+        -- Ensure path ends with /
+        if not string.match(input, "/$") then
+            input = input .. "/"
+        end
+        
+        resumeFolder = input
+        hs.alert.show("Resume folder updated: " .. resumeFolder, 3)
+        debugLog("Custom resume folder set to: " .. resumeFolder)
+    end
+end
 
 -- ============================================================================
 -- UTILITY FUNCTIONS
@@ -213,48 +260,16 @@ hs.alert.show("Resume Uploader Ready! 🚀", 2)
 debugLog("Hammerspoon Resume Uploader initialized")
 
 -- ============================================================================
--- MANUAL CONTROLS (for testing and debugging)
+-- MANUAL CONTROLS
 -- ============================================================================
 
--- Hotkey to manually trigger resume upload (Cmd+Shift+R)
-hs.hotkey.bind({"cmd", "shift"}, "r", function()
-    local chromeApp = hs.application.get("Google Chrome")
-    if chromeApp then
-        local win = chromeApp:focusedWindow()
-        if win then
-            handleFilePicker(win, "Google Chrome")
-        else
-            hs.alert.show("No Chrome window focused")
-        end
-    else
-        hs.alert.show("Chrome not running")
-    end
+-- Hotkey to select resume folder (Cmd+Shift+P)
+hs.hotkey.bind({"cmd", "shift"}, "p", function()
+    selectResumeFolder()
 end)
 
--- Hotkey to toggle debug mode (Cmd+Shift+D)
+-- Hotkey to toggle debug mode (Cmd+Shift+D) - for troubleshooting
 hs.hotkey.bind({"cmd", "shift"}, "d", function()
     debugMode = not debugMode
     hs.alert.show("Debug mode: " .. (debugMode and "ON" or "OFF"), 1)
 end)
-
--- Hotkey to show current Chrome tab title (Cmd+Shift+T)
-hs.hotkey.bind({"cmd", "shift"}, "t", function()
-    local chromeApp = hs.application.get("Google Chrome")
-    if chromeApp then
-        local win = chromeApp:focusedWindow()
-        if win then
-            local title = win:title()
-            hs.alert.show("Tab: " .. title, 3)
-            debugLog("Current tab title: " .. title)
-        else
-            hs.alert.show("No Chrome window focused")
-        end
-    else
-        hs.alert.show("Chrome not running")
-    end
-end)
-
-debugLog("Hotkeys registered:")
-debugLog("  Cmd+Shift+R: Manual trigger")
-debugLog("  Cmd+Shift+D: Toggle debug mode")
-debugLog("  Cmd+Shift+T: Show current tab title")

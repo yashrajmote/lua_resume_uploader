@@ -39,9 +39,7 @@ Place your resume files in `~/Documents/Resumes/` with company names:
 
 ## 🔧 Hotkeys
 
-- `Cmd+Shift+R`: Manual trigger (test the script)
-- `Cmd+Shift+D`: Toggle debug mode
-- `Cmd+Shift+T`: Show current tab title
+- `Cmd+Shift+D`: Toggle debug mode (for troubleshooting)
 
 ## 📁 File Structure
 
@@ -87,14 +85,14 @@ Check out `HAMMERSPOON_LEARNING_GUIDE.md` for a comprehensive guide to mastering
 4. Make sure Chrome is the active browser
 
 ### Resume Not Found?
-1. Check the company name extraction with `Cmd+Shift+T`
+1. Enable debug mode with `Cmd+Shift+D` to see detailed logs
 2. Ensure your resume filename matches the sanitized company name
 3. Check the resume folder path in the script
 
 ### File Picker Not Detected?
 1. Make sure you're using Chrome
-2. Try the manual trigger: `Cmd+Shift+R`
-3. Check if the file picker title matches the patterns
+2. Check if the file picker title matches the patterns
+3. Enable debug mode to see what's being detected
 
 ## 📝 Supported Job Sites
 
