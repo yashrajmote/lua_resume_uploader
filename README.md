@@ -14,7 +14,7 @@ brew install --cask hammerspoon
 # Copy the script to Hammerspoon config directory
 cp init.lua ~/.hammerspoon/
 
-# Create resume folder
+# Create resume folder (or choose your own path)
 mkdir -p ~/Documents/Resumes
 ```
 
@@ -39,6 +39,7 @@ Place your resume files in `~/Documents/Resumes/` with company names:
 
 ## 🔧 Hotkeys
 
+- `Cmd+Shift+P`: Select resume folder location (GUI)
 - `Cmd+Shift+D`: Toggle debug mode (for troubleshooting)
 
 ## 📁 File Structure
@@ -52,6 +53,12 @@ lua_resume_uploader/
 
 ## 🛠️ Customization
 
+### **Easy GUI Configuration:**
+- Press `Cmd+Shift+P` to open the folder selection dialog
+- Choose from common locations or enter a custom path
+- No need to edit code!
+
+### **Advanced Configuration:**
 Edit the configuration in `init.lua`:
 
 ```lua
@@ -62,7 +69,7 @@ local resumeFolder = "/Users/yash/Documents/Resumes/"
 local typingDelay = 0.5
 
 -- Toggle debug mode
-local debugMode = true
+local debugMode = false
 ```
 
 ### Resume Naming Convention

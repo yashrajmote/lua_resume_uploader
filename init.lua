@@ -23,9 +23,13 @@ local typingDelay = 0.5
 local function selectResumeFolder()
     local chooser = hs.chooser.new(function(choice)
         if choice then
-            resumeFolder = choice.text .. "/"
-            hs.alert.show("Resume folder updated: " .. resumeFolder, 3)
-            debugLog("Resume folder changed to: " .. resumeFolder)
+            if choice.text == "Custom Path..." then
+                getCustomPath()
+            else
+                resumeFolder = choice.text .. "/"
+                hs.alert.show("Resume folder updated: " .. resumeFolder, 3)
+                debugLog("Resume folder changed to: " .. resumeFolder)
+            end
         end
     end)
     
