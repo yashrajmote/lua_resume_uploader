@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Software Engineer at Apple Inc. – Workday</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .job-title { color: #333; font-size: 24px; }
+        .company { color: #666; font-size: 18px; }
+        .apply-btn { 
+            background: #007AFF; 
+            color: white; 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 6px; 
+            font-size: 16px; 
+            cursor: pointer;
+            margin: 20px 0;
+        }
+        .apply-btn:hover { background: #0056CC; }
+        .upload-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 6px; }
+    </style>
+</head>
+<body>
+    <h1 class="job-title">Software Engineer</h1>
+    <p class="company">Apple Inc.</p>
+    
+    <div class="upload-section">
+        <h3>Upload Your Resume</h3>
+        <p>Please upload your resume to apply for this position.</p>
+        <input type="file" id="resume-upload" accept=".pdf,.doc,.docx" style="display: none;">
+        <button class="apply-btn" onclick="document.getElementById('resume-upload').click()">
+            📄 Upload Resume
+        </button>
+    </div>
+    
+    <script>
+        // Auto-click the file input after 3 seconds for testing
+        setTimeout(() => {
+            console.log("Auto-clicking file input for testing...");
+            document.getElementById('resume-upload').click();
+        }, 3000);
+        
+        // Show alert when file is selected
+        document.getElementById('resume-upload').addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                alert("File selected: " + e.target.files[0].name);
+            }
+        });
+    </script>
+</body>
+</html>

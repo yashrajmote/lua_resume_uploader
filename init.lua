@@ -25,6 +25,10 @@ local function selectResumeFolder()
         if choice then
             if choice.text == "Custom Path..." then
                 getCustomPath()
+            elseif choice.text == "Open Finder..." then
+                openFinderForPath()
+            elseif choice.text == "Show Current Path" then
+                showCurrentPath()
             else
                 resumeFolder = choice.text .. "/"
                 hs.alert.show("Resume folder updated: " .. resumeFolder, 3)
@@ -34,12 +38,9 @@ local function selectResumeFolder()
     end)
     
     chooser:choices({
-        {text = "/Users/yash/Documents/Resumes/", subText = "Default Documents folder"},
-        {text = "/Users/yash/Desktop/Resumes/", subText = "Desktop folder"},
-        {text = "/Users/yash/Downloads/Resumes/", subText = "Downloads folder"},
-        {text = "/Users/yash/Documents/Job Applications/Resumes/", subText = "Job Applications folder"},
-        {text = "/Users/yash/Documents/Career/Resumes/", subText = "Career folder"},
-        {text = "Custom Path...", subText = "Enter custom path"}
+        {text = "Open Finder...", subText = "Open Finder to copy path"},
+        {text = "Custom Path...", subText = "Enter custom path"},
+        {text = "Show Current Path", subText = "Display current resume folder"}
     })
     
     chooser:placeholderText("Select resume folder location")
@@ -64,6 +65,22 @@ local function getCustomPath()
         hs.alert.show("Resume folder updated: " .. resumeFolder, 3)
         debugLog("Custom resume folder set to: " .. resumeFolder)
     end
+end
+
+-- Function to open Finder for path selection
+local function openFinderForPath()
+    -- Open Finder to the current resume folder
+    hs.execute("open " .. resumeFolder)
+    
+    -- Show instructions
+    hs.alert.show("Finder opened! Right-click folder → 'Copy as Pathname' → Use 'Custom Path' option", 5)
+    debugLog("Finder opened to: " .. resumeFolder)
+end
+
+-- Function to show current path
+local function showCurrentPath()
+    hs.alert.show("Current resume folder: " .. resumeFolder, 4)
+    debugLog("Current resume folder: " .. resumeFolder)
 end
 
 -- ============================================================================
