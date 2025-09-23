@@ -1,87 +1,15 @@
--- Hammerspoon Auto Resume Uploader
--- This script automatically fills file picker dialogs with the correct resume
--- based on the company name extracted from the browser tab title
+-- Simple File System Browser for Hammerspoon
+-- A clean GUI that allows you to browse and select files from your file system
 
 -- ============================================================================
 -- CONFIGURATION
 -- ============================================================================
 
--- Default folder where resumes are stored
-local resumeFolder = "/Users/yash/Documents/Resumes/"
+-- Default starting directory
+local currentPath = "/Users/yash/Desktop/"
 
--- Debug mode - set to false for production use
-local debugMode = false
-
--- Delay before typing into file picker (in seconds)
-local typingDelay = 0.5
-
--- ============================================================================
--- PATH SELECTION GUI
--- ============================================================================
-
--- Function to show path selection dialog
-local function selectResumeFolder()
-    local chooser = hs.chooser.new(function(choice)
-        if choice then
-            if choice.text == "Custom Path..." then
-                getCustomPath()
-            elseif choice.text == "Open Finder..." then
-                openFinderForPath()
-            elseif choice.text == "Show Current Path" then
-                showCurrentPath()
-            else
-                resumeFolder = choice.text .. "/"
-                hs.alert.show("Resume folder updated: " .. resumeFolder, 3)
-                debugLog("Resume folder changed to: " .. resumeFolder)
-            end
-        end
-    end)
-    
-    chooser:choices({
-        {text = "Open Finder...", subText = "Open Finder to copy path"},
-        {text = "Custom Path...", subText = "Enter custom path"},
-        {text = "Show Current Path", subText = "Display current resume folder"}
-    })
-    
-    chooser:placeholderText("Select resume folder location")
-    chooser:show()
-end
-
--- Function to handle custom path input
-local function getCustomPath()
-    local input = hs.dialog.textPrompt("Custom Resume Path", 
-        "Enter the full path to your resume folder:", 
-        resumeFolder, 
-        "OK", 
-        "Cancel")
-    
-    if input and input ~= "" then
-        -- Ensure path ends with /
-        if not string.match(input, "/$") then
-            input = input .. "/"
-        end
-        
-        resumeFolder = input
-        hs.alert.show("Resume folder updated: " .. resumeFolder, 3)
-        debugLog("Custom resume folder set to: " .. resumeFolder)
-    end
-end
-
--- Function to open Finder for path selection
-local function openFinderForPath()
-    -- Open Finder to the current resume folder
-    hs.execute("open " .. resumeFolder)
-    
-    -- Show instructions
-    hs.alert.show("Finder opened! Right-click folder → 'Copy as Pathname' → Use 'Custom Path' option", 5)
-    debugLog("Finder opened to: " .. resumeFolder)
-end
-
--- Function to show current path
-local function showCurrentPath()
-    hs.alert.show("Current resume folder: " .. resumeFolder, 4)
-    debugLog("Current resume folder: " .. resumeFolder)
-end
+-- Debug mode
+local debugMode = true
 
 -- ============================================================================
 -- UTILITY FUNCTIONS
@@ -90,206 +18,233 @@ end
 -- Helper function to log debug messages
 local function debugLog(message)
     if debugMode then
-        print("[Hammerspoon Resume Uploader] " .. message)
+        print("[File Browser] " .. message)
     end
 end
 
--- Helper to sanitize company name (remove spaces/special chars for filename)
-local function sanitize(name)
-    if not name or name == "" then
-        return "default"
-    end
-    
-    -- Replace spaces with underscores and strip non-alphanumerics except underscores
-    local sanitized = name:gsub("%s+", "_"):gsub("[^%w_]", "")
-    
-    -- Ensure it's not empty after sanitization
-    if sanitized == "" then
-        return "default"
-    end
-    
-    return sanitized
-end
-
--- Helper to check if a file exists
-local function fileExists(path)
+-- Check if a path is a directory
+local function isDirectory(path)
     local file = io.open(path, "r")
     if file then
         file:close()
-        return true
+        return false
     end
-    return false
+    return true
+end
+
+-- Get directory contents
+local function getDirectoryContents(path)
+    local contents = {}
+    local handle = io.popen("ls -la '" .. path .. "' 2>/dev/null")
+    
+    if handle then
+        for line in handle:lines() do
+            local name = string.match(line, "%s+([^%s]+)$")
+            if name and name ~= "." and name ~= ".." then
+                local fullPath = path .. (string.match(path, "/$") and "" or "/") .. name
+                local isDir = isDirectory(fullPath)
+                table.insert(contents, {
+                    name = name,
+                    path = fullPath,
+                    isDirectory = isDir,
+                    display = (isDir and "📁 " or "📄 ") .. name
+                })
+            end
+        end
+        handle:close()
+    end
+    
+    return contents
 end
 
 -- ============================================================================
--- COMPANY NAME EXTRACTION PATTERNS
+-- FILE BROWSER GUI
 -- ============================================================================
 
--- Multiple patterns to extract company names from different job sites
-local function extractCompanyName(tabTitle)
-    debugLog("Extracting company name from: " .. tabTitle)
-    
-    -- Pattern 1: "Apply to [Company Name] – Workday"
-    local company = string.match(tabTitle, "Apply to ([%w%s%-_&%.]+)")
-    if company then
-        debugLog("Found company (Pattern 1): " .. company)
-        return company
-    end
-    
-    -- Pattern 2: "Careers at [Company Name] – Lever"
-    company = string.match(tabTitle, "Careers at ([%w%s%-_&%.]+)")
-    if company then
-        debugLog("Found company (Pattern 2): " .. company)
-        return company
-    end
-    
-    -- Pattern 3: "[Company Name] - Careers"
-    company = string.match(tabTitle, "([%w%s%-_&%.]+) %- Careers")
-    if company then
-        debugLog("Found company (Pattern 3): " .. company)
-        return company
-    end
-    
-    -- Pattern 4: "Jobs at [Company Name]"
-    company = string.match(tabTitle, "Jobs at ([%w%s%-_&%.]+)")
-    if company then
-        debugLog("Found company (Pattern 4): " .. company)
-        return company
-    end
-    
-    -- Pattern 5: "[Company Name] Jobs"
-    company = string.match(tabTitle, "([%w%s%-_&%.]+) Jobs")
-    if company then
-        debugLog("Found company (Pattern 5): " .. company)
-        return company
-    end
-    
-    -- Fallback: use first word of title
-    company = string.match(tabTitle, "^(%w+)")
-    if company then
-        debugLog("Found company (Fallback): " .. company)
-        return company
-    end
-    
-    debugLog("No company name found, using default")
-    return "default"
-end
+-- Main file browser chooser
+local fileChooser = nil
 
--- ============================================================================
--- FILE PICKER HANDLER
--- ============================================================================
-
--- Handler when file picker window appears
-local function handleFilePicker(win, appName)
-    debugLog("New window detected: " .. appName .. " - " .. win:title())
+-- Function to refresh the file browser
+local function refreshFileBrowser()
+    if not fileChooser then return end
     
-    -- Check if this is Chrome and a file picker dialog
-    if appName == "Google Chrome" then
-        local title = win:title()
-        local isFilePicker = string.match(title, "Open") or 
-                            string.match(title, "Choose File") or
-                            string.match(title, "Select File") or
-                            string.match(title, "Upload")
-        
-        if isFilePicker then
-            debugLog("File picker detected: " .. title)
-            
-            -- Get the frontmost Chrome window (the job page)
-            local chromeApp = hs.application.get("Google Chrome")
-            if not chromeApp then
-                debugLog("Chrome app not found")
-                return
-            end
-            
-            local browserWin = chromeApp:focusedWindow()
-            if not browserWin then
-                debugLog("No focused Chrome window found")
-                return
-            end
-            
-            local tabTitle = browserWin:title()
-            debugLog("Browser tab title: " .. tabTitle)
-            
-            -- Extract company name
-            local companyName = extractCompanyName(tabTitle)
-            local sanitizedCompany = sanitize(companyName)
-            
-            -- Build resume path
-            local resumePath = resumeFolder .. sanitizedCompany .. ".pdf"
-            debugLog("Looking for resume: " .. resumePath)
-            
-            -- Check if resume exists, if not try common variations
-            if not fileExists(resumePath) then
-                -- Try with different extensions
-                local extensions = {".pdf", ".docx", ".doc"}
-                local found = false
-                
-                for _, ext in ipairs(extensions) do
-                    local testPath = resumeFolder .. sanitizedCompany .. ext
-                    if fileExists(testPath) then
-                        resumePath = testPath
-                        found = true
-                        break
-                    end
-                end
-                
-                if not found then
-                    debugLog("Resume not found for: " .. sanitizedCompany)
-                    hs.alert.show("Resume not found: " .. sanitizedCompany, 3)
-                    return
-                end
-            end
-            
-            -- Show alert
-            hs.alert.show("Uploading: " .. sanitizedCompany .. ".pdf", 2)
-            debugLog("Will type: " .. resumePath)
-            
-            -- Type into file picker after delay
-            hs.timer.doAfter(typingDelay, function()
-                -- Focus the file picker window
-                win:focus()
-                
-                -- Small delay to ensure focus
-                hs.timer.doAfter(0.1, function()
-                    -- Clear any existing text and type the path
-                    hs.eventtap.keyStroke({"cmd"}, "a") -- Select all
-                    hs.timer.doAfter(0.05, function()
-                        hs.eventtap.keyStrokes(resumePath)
-                        hs.timer.doAfter(0.1, function()
-                            hs.eventtap.keyStroke({}, "return")
-                            debugLog("Resume path typed and submitted")
-                        end)
-                    end)
-                end)
-            end)
+    debugLog("Refreshing file browser for: " .. currentPath)
+    
+    local contents = getDirectoryContents(currentPath)
+    local choices = {}
+    
+    -- Add parent directory option if not at root
+    if currentPath ~= "/" then
+        local parentPath = string.match(currentPath, "^(.*)/[^/]+/?$")
+        if parentPath then
+            table.insert(choices, {
+                text = "📁 ..",
+                subText = "Go to parent directory",
+                path = parentPath,
+                isDirectory = true
+            })
         end
     end
+    
+    -- Add current directory contents
+    for _, item in ipairs(contents) do
+        table.insert(choices, {
+            text = item.display,
+            subText = item.path,
+            path = item.path,
+            isDirectory = item.isDirectory
+        })
+    end
+    
+    fileChooser:choices(choices)
+end
+
+-- Function to show file browser
+local function showFileBrowser()
+    fileChooser = hs.chooser.new(function(choice)
+        if choice then
+            if choice.isDirectory then
+                -- Navigate to directory
+                currentPath = choice.path
+                if not string.match(currentPath, "/$") then
+                    currentPath = currentPath .. "/"
+                end
+                debugLog("Navigating to: " .. currentPath)
+                refreshFileBrowser()
+            else
+                -- File selected
+                debugLog("File selected: " .. choice.path)
+                hs.alert.show("Selected: " .. choice.text, 3)
+                
+                -- You can add file handling logic here
+                -- For example, open the file:
+                hs.execute("open '" .. choice.path .. "'")
+            end
+        end
+    end)
+    
+    fileChooser:placeholderText("Browse files and folders...")
+    fileChooser:queryChangedCallback(function(query)
+        -- Optional: Add search/filter functionality here
+    end)
+    
+    refreshFileBrowser()
+    fileChooser:show()
+end
+
+-- Function to show current path
+local function showCurrentPath()
+    hs.alert.show("Current path: " .. currentPath, 4)
+    debugLog("Current path: " .. currentPath)
+end
+
+-- Function to set custom path
+local function setCustomPath()
+    -- Use AppleScript for reliable text input
+    local script = [[
+        tell application "System Events"
+            set thePath to text returned of (display dialog "Enter the full path to browse:" default answer "]] .. currentPath .. [[" with title "Set Directory Path" buttons {"Cancel", "Set Path"} default button "Set Path")
+            return thePath
+        end tell
+    ]]
+    
+    local success, result = hs.osascript.applescript(script)
+    
+    if success and result and result ~= "" then
+        -- Clean up the input
+        local input = result:gsub("^%s+", ""):gsub("%s+$", "") -- Trim whitespace
+        input = input:gsub("\n", ""):gsub("\r", "") -- Remove newlines
+        
+        debugLog("Raw input received: '" .. input .. "'")
+        
+        if input and input ~= "" then
+            -- Ensure path ends with /
+            if not string.match(input, "/$") then
+                input = input .. "/"
+            end
+            
+            currentPath = input
+            hs.alert.show("Path updated: " .. currentPath, 3)
+            debugLog("Path changed to: " .. currentPath)
+            
+            if fileChooser then
+                refreshFileBrowser()
+            end
+        else
+            hs.alert.show("No path entered", 2)
+            debugLog("Empty path received")
+        end
+    else
+        hs.alert.show("Path selection cancelled", 2)
+        debugLog("Custom path cancelled or failed. Success: " .. tostring(success) .. ", Result: " .. tostring(result))
+    end
+end
+
+-- Function to open Finder at current path
+local function openFinder()
+    hs.execute("open '" .. currentPath .. "'")
+    hs.alert.show("Finder opened at: " .. currentPath, 3)
+    debugLog("Finder opened at: " .. currentPath)
+end
+
+-- ============================================================================
+-- MAIN MENU
+-- ============================================================================
+
+-- Function to show main menu
+local function showMainMenu()
+    local menuChooser = hs.chooser.new(function(choice)
+        if choice then
+            if choice.text == "Browse Files" then
+                showFileBrowser()
+            elseif choice.text == "Set Custom Path" then
+                setCustomPath()
+            elseif choice.text == "Show Current Path" then
+                showCurrentPath()
+            elseif choice.text == "Open Finder" then
+                openFinder()
+            elseif choice.text == "Toggle Debug" then
+                debugMode = not debugMode
+                hs.alert.show("Debug mode: " .. (debugMode and "ON" or "OFF"), 2)
+            end
+        end
+    end)
+    
+    menuChooser:choices({
+        {text = "Browse Files", subText = "Open file browser"},
+        {text = "Set Custom Path", subText = "Change starting directory"},
+        {text = "Show Current Path", subText = "Display current directory"},
+        {text = "Open Finder", subText = "Open Finder at current path"},
+        {text = "Toggle Debug", subText = "Toggle debug mode"}
+    })
+    
+    menuChooser:placeholderText("File System Browser - Choose an option")
+    menuChooser:show()
 end
 
 -- ============================================================================
 -- INITIALIZATION
 -- ============================================================================
 
--- Create window filter for Chrome
-local wf = hs.window.filter.new("Google Chrome")
-
--- Subscribe to window creation events
-wf:subscribe(hs.window.filter.windowCreated, handleFilePicker)
-
 -- Show startup message
-hs.alert.show("Resume Uploader Ready! 🚀", 2)
-debugLog("Hammerspoon Resume Uploader initialized")
+hs.alert.show("File System Browser Ready! 🗂️", 2)
+debugLog("File System Browser initialized")
 
 -- ============================================================================
--- MANUAL CONTROLS
+-- HOTKEYS
 -- ============================================================================
 
--- Hotkey to select resume folder (Cmd+Shift+P)
-hs.hotkey.bind({"cmd", "shift"}, "p", function()
-    selectResumeFolder()
+-- Hotkey to open main menu (Cmd+Shift+F)
+hs.hotkey.bind({"cmd", "shift"}, "f", function()
+    showMainMenu()
 end)
 
--- Hotkey to toggle debug mode (Cmd+Shift+D) - for troubleshooting
+-- Hotkey to directly open file browser (Cmd+Shift+B)
+hs.hotkey.bind({"cmd", "shift"}, "b", function()
+    showFileBrowser()
+end)
+
+-- Hotkey to toggle debug mode (Cmd+Shift+D)
 hs.hotkey.bind({"cmd", "shift"}, "d", function()
     debugMode = not debugMode
     hs.alert.show("Debug mode: " .. (debugMode and "ON" or "OFF"), 1)
