@@ -6,7 +6,7 @@
 -- ============================================================================
 
 -- Default starting directory
-local currentPath = "/Users/yash/Desktop/"
+local currentPath = "/Users/yash/Desktop/Desktop - YASH’s MacBook Air/APPLICATIONS/Tailored Resumes "
 
 -- Debug mode
 local debugMode = true
@@ -140,44 +140,79 @@ end
 
 -- Function to set custom path
 local function setCustomPath()
-    -- Use AppleScript for reliable text input
-    local script = [[
-        tell application "System Events"
-            set thePath to text returned of (display dialog "Enter the full path to browse:" default answer "]] .. currentPath .. [[" with title "Set Directory Path" buttons {"Cancel", "Set Path"} default button "Set Path")
-            return thePath
-        end tell
-    ]]
-    
-    local success, result = hs.osascript.applescript(script)
-    
-    if success and result and result ~= "" then
-        -- Clean up the input
-        local input = result:gsub("^%s+", ""):gsub("%s+$", "") -- Trim whitespace
-        input = input:gsub("\n", ""):gsub("\r", "") -- Remove newlines
-        
-        debugLog("Raw input received: '" .. input .. "'")
-        
-        if input and input ~= "" then
-            -- Ensure path ends with /
-            if not string.match(input, "/$") then
-                input = input .. "/"
+    -- Use a simple chooser with common paths instead of text input
+    local pathChooser = hs.chooser.new(function(choice)
+        if choice then
+            if choice.text == "Enter Custom Path..." then
+                -- Use a chooser-based approach for custom path input
+                local customPathChooser = hs.chooser.new(function(customChoice)
+                    if customChoice then
+                        if customChoice.text == "Type Path Manually..." then
+                            -- Use hs.dialog.blockAlert for text input
+                            local result = hs.dialog.blockAlert("Custom Path", 
+                                "Enter the full path:", 
+                                "Set", 
+                                "Cancel", 
+                                "text", 
+                                currentPath)
+                            
+                            if result == "Set" then
+                                -- Get the text from clipboard or use a different method
+                                hs.alert.show("Please type the path in the console and press Enter", 5)
+                                debugLog("Waiting for manual path input...")
+                                
+                                -- For now, just show instructions
+                                hs.alert.show("Use 'Show Current Path' to see current, then modify in code", 4)
+                            end
+                        else
+                            -- Use the selected path
+                            currentPath = customChoice.path
+                            hs.alert.show("Path updated: " .. currentPath, 3)
+                            debugLog("Path changed to: " .. currentPath)
+                            
+                            if fileChooser then
+                                refreshFileBrowser()
+                            end
+                        end
+                    end
+                end)
+                
+                customPathChooser:choices({
+                    {text = "Type Path Manually...", subText = "Enter custom path", path = "manual"},
+                    {text = "/Users/yash/", subText = "Home directory", path = "/Users/yash/"},
+                    {text = "/Users/yash/Desktop/MyResumes/", subText = "MyResumes folder", path = "/Users/yash/Desktop/MyResumes/"},
+                    {text = "/Users/yash/Documents/Resumes/", subText = "Documents Resumes", path = "/Users/yash/Documents/Resumes/"}
+                })
+                
+                customPathChooser:placeholderText("Select a path or type manually")
+                customPathChooser:show()
+            else
+                -- Use the selected path
+                currentPath = choice.path
+                hs.alert.show("Path updated: " .. currentPath, 3)
+                debugLog("Path changed to: " .. currentPath)
+                
+                if fileChooser then
+                    refreshFileBrowser()
+                end
             end
-            
-            currentPath = input
-            hs.alert.show("Path updated: " .. currentPath, 3)
-            debugLog("Path changed to: " .. currentPath)
-            
-            if fileChooser then
-                refreshFileBrowser()
-            end
-        else
-            hs.alert.show("No path entered", 2)
-            debugLog("Empty path received")
         end
-    else
-        hs.alert.show("Path selection cancelled", 2)
-        debugLog("Custom path cancelled or failed. Success: " .. tostring(success) .. ", Result: " .. tostring(result))
-    end
+    end)
+    
+    pathChooser:choices({
+        {text = "/Users/yash/Desktop/", subText = "Desktop", path = "/Users/yash/Desktop/"},
+        {text = "/Users/yash/Documents/", subText = "Documents", path = "/Users/yash/Documents/"},
+        {text = "/Users/yash/Downloads/", subText = "Downloads", path = "/Users/yash/Downloads/"},
+        {text = "/Users/yash/Desktop/lua_resume_uploader/", subText = "Current Project", path = "/Users/yash/Desktop/lua_resume_uploader/"},
+        {text = "/Users/yash/", subText = "Home Directory", path = "/Users/yash/"},
+        {text = "/Users/yash/Desktop/MyResumes/", subText = "MyResumes Folder", path = "/Users/yash/Desktop/MyResumes/"},
+        {text = "/Users/yash/Documents/Resumes/", subText = "Documents Resumes", path = "/Users/yash/Documents/Resumes/"},
+        {text = "/Users/yash/Desktop/Resumes/", subText = "Desktop Resumes", path = "/Users/yash/Desktop/Resumes/"},
+        {text = "Enter Custom Path...", subText = "More options available", path = "custom"}
+    })
+    
+    pathChooser:placeholderText("Select a common path or enter custom")
+    pathChooser:show()
 end
 
 -- Function to open Finder at current path
